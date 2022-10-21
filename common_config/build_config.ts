@@ -9,6 +9,7 @@ export interface BuildConfig {
 export interface BuildStacks {
 	network: BuildNetworkStack;
 	eks: EksStack;
+	aurora: AuroraDBStack;
 }
 
 export interface BuildNetworkStack {
@@ -24,10 +25,11 @@ export interface SubnetConfig {
 
 export interface EksStack{
 	version: string;
-	private: boolean;
+	privateSubnets: boolean;
 	desiredCapacity: number;
 	minSize: number;
 	maxSize: number;
+	albVersion: string;
 	diskSize: number;
 	istanceTypes: istanceConfig[];
 	resources: resourcesConfig;
@@ -134,4 +136,16 @@ export interface configMapConfig{
 export interface dataMapConfig{
 	key: string;
 	value: string;
+}
+
+export interface AuroraDBStack{
+	engine: string;
+	majorVersion: string;
+	version: string;
+	istanceClass: string;
+	istanceSize: string;
+	privateSubnets: boolean;
+	deletionProtection: boolean;
+	istancesNumber: number;
+
 }

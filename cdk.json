@@ -53,6 +53,7 @@
           "diskSize": 20,
           "minSize": 1,
           "maxSize": 3,
+          "albVersion":"2.4.1",
           "istanceTypes": [
             {
               "class": "t2",
@@ -152,6 +153,17 @@
               }
             ]
           }
+        },
+
+        "aurora":{
+          "engine": "aurora",
+          "majorVersion": "5.6",
+          "version": "1.23.4",
+          "istanceClass": "t3",
+          "istanceSize": "micro",
+          "privateSubnets": true,
+          "deletionProtection": false,
+          "istancesNumber": 2
         }
       }
     },

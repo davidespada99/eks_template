@@ -1,6 +1,6 @@
 import { Stack, StackProps } from 'aws-cdk-lib';
 import { InstanceType, SubnetType } from 'aws-cdk-lib/aws-ec2';
-import { Cluster, KubernetesVersion } from 'aws-cdk-lib/aws-eks';
+import { AlbControllerVersion, Cluster, KubernetesVersion } from 'aws-cdk-lib/aws-eks';
 import { ManagedPolicy, Role, ServicePrincipal } from 'aws-cdk-lib/aws-iam';
 import { Construct } from 'constructs';
 import { BuildConfig } from '../common_config/build_config';
@@ -19,13 +19,16 @@ export class EksStack extends Stack {
       managedPolicies: [ManagedPolicy.fromAwsManagedPolicyName("AmazonEKSClusterPolicy"),]
     });
 
-    const cluster = new Cluster(this, "ClusterTemplate", {
+    const eksCluster = new Cluster(this, "ClusterTemplate", {
       clusterName: `${prefix}-eks-cluster`,
       version: KubernetesVersion.of(eksConfig.version),
       vpc: netProps.vpc,
-      vpcSubnets: [{ subnets: eksConfig.private ? netProps.privateSubnets : netProps.publicSubnets },],
+      vpcSubnets: [{ subnets: eksConfig.privateSubnets ? netProps.privateSubnets : netProps.publicSubnets },],
       defaultCapacity: 0,
-      role: clusterRole
+      role: clusterRole,
+      albController: {
+        version: AlbControllerVersion.of(eksConfig.albVersion)
+      },
 
     });
 
@@ -35,7 +38,7 @@ export class EksStack extends Stack {
     });
 
     //add a Node Group of aws ec2 istances self-managed 
-    cluster.addNodegroupCapacity(`${prefix}-eks-cluster`, {
+    eksCluster.addNodegroupCapacity(`${prefix}-eks-cluster`, {
       nodegroupName: `${prefix}-node-group`,
       instanceTypes: istancesType,
       desiredSize: eksConfig.desiredCapacity,
@@ -151,7 +154,7 @@ export class EksStack extends Stack {
     });
 
     //adding resources to k8 cluster
-    cluster.addManifest("k8-resources", resources);
+    eksCluster.addManifest("k8-resources", resources);
 
   }
 }
