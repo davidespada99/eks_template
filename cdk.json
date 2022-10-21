@@ -1,0 +1,117 @@
+{
+  "app": "npx ts-node --prefer-ts-exts bin/eks-template.ts",
+  "watch": {
+    "include": [
+      "**"
+    ],
+    "exclude": [
+      "README.md",
+      "cdk*.json",
+      "**/*.d.ts",
+      "**/*.js",
+      "tsconfig.json",
+      "package*.json",
+      "yarn.lock",
+      "node_modules",
+      "test"
+    ]
+  },
+  "context": {
+    "dev": {
+      "account": "663614489119",
+      "region": "eu-west-1",
+      "project": "arch-2",
+      "environment": "dev",
+      "stacks": {
+        "network": {
+          "vpcCidr": "10.0.0.0/20",
+          "privateSubnets": [
+            {
+              "zone": "a",
+              "cidr": "10.0.0.0/22"
+            },
+            {
+              "zone": "b",
+              "cidr": "10.0.4.0/22"
+            }
+          ],
+          "publicSubnets": [
+            {
+              "zone": "a",
+              "cidr": "10.0.8.0/22"
+            },
+            {
+              "zone": "b",
+              "cidr": "10.0.12.0/22"
+            }
+          ]
+        },
+        "eks": {
+          "version": "1.21",
+          "private": true,
+          "desiredCapacity": 2,
+          "diskSize": 20,
+          "minSize": 1,
+          "maxSize": 3,
+          "istanceTypes": [
+            {
+              "class": "t2",
+              "size": "micro"
+            }
+          ],
+          "resources": {
+            "appLabel": "my-app-label",
+
+            "namespaces": {
+              "apiVersion": "v1",
+              "metadataName": "my-app-ns"
+            },
+
+            "services": [
+              {
+                "apiVersion": "v1",
+                "metadata": {
+                  "name": "my-app-kubernetes",
+                  "namespace": "my-app-ns"
+                },
+                "spec": {
+                  "type": "ClusterIP",
+                  "ports": {
+                    "protocol": "TCP",
+                    "port": 80,
+                    "targetPort": 8080,
+                    "nodePort": ""
+                  }
+                }
+              }
+            ],
+            "deployment": [
+              {}
+            ]
+          }
+        }
+      }
+    },
+    "@aws-cdk/aws-apigateway:usagePlanKeyOrderInsensitiveId": true,
+    "@aws-cdk/core:stackRelativeExports": true,
+    "@aws-cdk/aws-rds:lowercaseDbIdentifier": true,
+    "@aws-cdk/aws-lambda:recognizeVersionProps": true,
+    "@aws-cdk/aws-lambda:recognizeLayerVersion": true,
+    "@aws-cdk/aws-cloudfront:defaultSecurityPolicyTLSv1.2_2021": true,
+    "@aws-cdk-containers/ecs-service-extensions:enableDefaultLogDriver": true,
+    "@aws-cdk/aws-ec2:uniqueImdsv2TemplateName": true,
+    "@aws-cdk/core:checkSecretUsage": true,
+    "@aws-cdk/aws-iam:minimizePolicies": true,
+    "@aws-cdk/aws-ecs:arnFormatIncludesClusterName": true,
+    "@aws-cdk/core:validateSnapshotRemovalPolicy": true,
+    "@aws-cdk/aws-codepipeline:crossAccountKeyAliasStackSafeResourceName": true,
+    "@aws-cdk/aws-s3:createDefaultLoggingPolicy": true,
+    "@aws-cdk/aws-sns-subscriptions:restrictSqsDescryption": true,
+    "@aws-cdk/aws-apigateway:disableCloudWatchRole": true,
+    "@aws-cdk/core:enablePartitionLiterals": true,
+    "@aws-cdk/core:target-partitions": [
+      "aws",
+      "aws-cn"
+    ]
+  }
+}

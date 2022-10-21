@@ -1,0 +1,36 @@
+{
+  "name": "eks-template",
+  "version": "0.1.0",
+  "bin": {
+    "eks-template": "bin/eks-template.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc -w",
+    "test": "jest",
+    "cdk": "cdk",
+
+    
+    "cdk-deploy-dev-all": "cdk context --clear && cdk deploy \"*\" -c config=dev  --require-approval=never",
+		"cdk-deploy-stack": "cdk context --clear && cdk deploy $npm_config_stack -c config=dev --require-approval=never",
+		"cdk-diff-dev":"cdk context --clear && cdk diff -c config=dev",
+    "cdk-destroy-stack-dev": "cdk context --clear && cdk destroy $npm_config_stack -c config=dev ",
+		"cdk-destroy-dev-all": "cdk context --clear && cdk destroy \"*\" -c config=dev --require-approval=never"
+  
+  },
+  "devDependencies": {
+    "@types/jest": "^27.5.2",
+    "@types/node": "10.17.27",
+    "@types/prettier": "2.6.0",
+    "jest": "^27.5.1",
+    "ts-jest": "^27.1.4",
+    "aws-cdk": "2.45.0",
+    "ts-node": "^10.9.1",
+    "typescript": "~3.9.7"
+  },
+  "dependencies": {
+    "aws-cdk-lib": "2.45.0",
+    "constructs": "^10.0.0",
+    "source-map-support": "^0.5.21"
+  }
+}
