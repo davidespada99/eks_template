@@ -110,3 +110,28 @@ export interface envMapKeyRef{
 	MapKeyRefName: string;
 	MapKeyRefKey: string
 }
+
+export interface secretConfig{
+	apiVersion: string;
+	metadata: metadataConfig;
+	type: string;
+	data: dataSecretCongif;
+}
+
+export interface dataSecretCongif{
+	keyUser: string;
+	userValue: string;
+	keyPassword: string;
+	passwordValue: string;
+}
+
+export interface configMapConfig{
+	apiVersion: string;
+	metadata: metadataConfig;
+	data: dataMapConfig;
+}
+
+export interface dataMapConfig{
+	key: string;
+	value: string;
+}

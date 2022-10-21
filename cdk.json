@@ -61,11 +61,41 @@
           ],
           "resources": {
             "appLabel": "my-app-label",
-            "namespaces": {
+
+            "namespaces": [
+              {
+                "apiVersion": "v1",
+                "metadataName": "my-app-ns"
+              }
+            ],
+
+            "configMap": {
               "apiVersion": "v1",
-              "metadataName": "my-app-ns"
+              "metadata": {
+                "name": "my-secret-kubernetes",
+                "namespace": "my-app-ns"
+              },
+              "data": [
+                {
+                  "key": "mongo-url",
+                  "value": "mongo-service"
+                }
+              ]
             },
-            "configMap"
+            "secret": {
+              "apiVersion": "v1",
+              "metadata": {
+                "name": "my-secret-kubernetes",
+                "namespace": "my-app-ns"
+              },
+              "type": "Opaque",
+              "data": {
+                "keyUser": "mongo-user",
+                "userValue": "username",
+                "keyPassword": "mongo-password",
+                "passwordValue": "MyPassword"
+              }
+            },
             "services": [
               {
                 "apiVersion": "v1",
@@ -77,9 +107,9 @@
                   "type": "ClusterIP",
                   "ports": {
                     "protocol": "TCP",
-                    "port": 80,
-                    "targetPort": 8080,
-                    "nodePort": ""
+                    "port": 27017,
+                    "targetPort": 27017,
+                    "nodePort": null
                   }
                 }
               }
@@ -91,34 +121,33 @@
                   "name": "my-app-kubernetes",
                   "namespace": "my-app-ns"
                 },
-                "spec":{
-                  "containers":[
+                "spec": {
+                  "containers": [
                     {
-                      "name": "my-app-kubernetes" ,
-                      "image": "ngnix" ,
-                      "containerPort": 3000,
-                      "envSecret":[
+                      "name": "my-app-kubernetes",
+                      "image": "mongo",
+                      "containerPort": 27017,
+                      "envSecret": [
                         {
                           "name": "USER-NAME",
-                          "secretName": ,
-                          "secretKey": ,
+                          "secretName": "my-secret-kubernetes",
+                          "secretKey": "mongo-user"
                         },
                         {
                           "name": "USER-PWD",
-                          "secretName": ,
-                          "secretKey": ,
+                          "secretName": "my-secret-kubernetes",
+                          "secretKey": "mongo-password"
                         }
                       ],
-                      "envMapKey":[
+                      "envMapKey": [
                         {
-                          "name": "DB_URL",
-                          "MapKeyRefName": ,
-                          "MapKeyRefKey": ,
+                          "name": null,
+                          "MapKeyRefName": null,
+                          "MapKeyRefKey": null
                         }
                       ]
-
                     }
-                  ],
+                  ]
                 }
               }
             ]

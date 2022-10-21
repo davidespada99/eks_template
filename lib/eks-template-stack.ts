@@ -49,20 +49,56 @@ export class EksStack extends Stack {
     //You cannot define a resource in a Kubernetes namespace before the namespace was created
 
     //namspaces
+    eksConfig.resources.namespaces.forEach((ns) => {
+      resources.push(
+        {
+          apiVersion: eksConfig.resources.namespaces.forEach((ns) => {
+            resources.push({
+              apiVersion: ns.apiversion,
+              kind: 'Namespace',
+              metadata: { name: ns.metadataName },
+            }
+            )
+          }),
+        }
+      );
+    })
+
+    //configMap
     resources.push(
       {
-        apiVersion: eksConfig.resources.namespaces.forEach((ns) => {
-          resources.push({
-            apiVersion: ns.apiversion,
-            kind: 'Namespace',
-            metadata: { name: ns.metadataName },
-          }
-          )
-        }),
-      }
-    );
+        apiVersion: eksConfig.resources.configmap.apiVersion,
+        kind: "ConfigMap",
+        metadata: {
+          name: eksConfig.resources.configmap.metadata.name,
+          namespace: eksConfig.resources.configmap.metadata.namespace
+        },
+        data:{
+          [eksConfig.resources.configmap.data.key] : eksConfig.resources.configmap.data.value
+        }
 
-    //deployment
+      }
+    )
+
+
+    //secret
+    resources.push(
+      {
+        apiVersion: eksConfig.resources.secret.apiVersion,
+        kind: "Secret",
+        metadata: {
+          name: eksConfig.resources.secret.metadata.name,
+          namespace: eksConfig.resources.secret.metadata.namespace
+        },
+        type: eksConfig.resources.secret.type,
+        data: {
+          [eksConfig.resources.secret.data.keyUser]: eksConfig.resources.secret.data.userValue,
+          [eksConfig.resources.secret.data.keyPassword]: eksConfig.resources.secret.data.passwordValue
+        }
+      }
+    )
+
+    //deployments
     eksConfig.resources.deployments.forEach((deploy) => {
       resources.push(
         {
@@ -81,7 +117,7 @@ export class EksStack extends Stack {
                 namespace: deploy.metadata.namespace
               },
               spec: {
-                containers: [ getContainers(deploy) ]
+                containers: [getContainers(deploy)]
               }
             }
           }
@@ -107,7 +143,7 @@ export class EksStack extends Stack {
             {
               port: service.spec.ports.port,
               targetPort: service.spec.ports.targetPort,
-              nodePort: service.spec.ports.nodePort? service.spec.ports.nodePort : null //???
+              nodePort: service.spec.ports.nodePort ? service.spec.ports.nodePort : null //???
             }
           }
         }
