@@ -61,12 +61,11 @@
           ],
           "resources": {
             "appLabel": "my-app-label",
-
             "namespaces": {
               "apiVersion": "v1",
               "metadataName": "my-app-ns"
             },
-
+            "configMap"
             "services": [
               {
                 "apiVersion": "v1",
@@ -86,7 +85,42 @@
               }
             ],
             "deployment": [
-              {}
+              {
+                "apiVersion": "apps/v1",
+                "metadata": {
+                  "name": "my-app-kubernetes",
+                  "namespace": "my-app-ns"
+                },
+                "spec":{
+                  "containers":[
+                    {
+                      "name": "my-app-kubernetes" ,
+                      "image": "ngnix" ,
+                      "containerPort": 3000,
+                      "envSecret":[
+                        {
+                          "name": "USER-NAME",
+                          "secretName": ,
+                          "secretKey": ,
+                        },
+                        {
+                          "name": "USER-PWD",
+                          "secretName": ,
+                          "secretKey": ,
+                        }
+                      ],
+                      "envMapKey":[
+                        {
+                          "name": "DB_URL",
+                          "MapKeyRefName": ,
+                          "MapKeyRefKey": ,
+                        }
+                      ]
+
+                    }
+                  ],
+                }
+              }
             ]
           }
         }

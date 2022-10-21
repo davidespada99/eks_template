@@ -2,10 +2,10 @@ import { Stack, StackProps } from 'aws-cdk-lib';
 import { InstanceType, SubnetType } from 'aws-cdk-lib/aws-ec2';
 import { Cluster, KubernetesVersion } from 'aws-cdk-lib/aws-eks';
 import { ManagedPolicy, Role, ServicePrincipal } from 'aws-cdk-lib/aws-iam';
-import { SelfManagedKafkaEventSource } from 'aws-cdk-lib/aws-lambda-event-sources';
 import { Construct } from 'constructs';
 import { BuildConfig } from '../common_config/build_config';
 import { NetworkImportStack } from './network-import';
+import { getContainers } from './eksFunctions/eksFunctions';
 
 export class EksStack extends Stack {
   constructor(scope: Construct, id: string, buildConfig: BuildConfig, netProps: NetworkImportStack, props?: StackProps) {
@@ -55,11 +55,40 @@ export class EksStack extends Stack {
           resources.push({
             apiVersion: ns.apiversion,
             kind: 'Namespace',
-            metadata: { name: ns.metadataName },}
+            metadata: { name: ns.metadataName },
+          }
           )
         }),
       }
     );
+
+    //deployment
+    eksConfig.resources.deployments.forEach((deploy) => {
+      resources.push(
+        {
+          apiVersion: deploy.apiVersion,
+          kind: "Deployment",
+          metadata: {
+            name: deploy.metadata.name,
+            namespace: deploy.metadata.namespace
+          },
+          spec: {
+            replicas: deploy.spec.replicas,
+            selector: { matchLabels: eksConfig.resources.appLabel, },
+            template: {
+              metadata: {
+                labels: eksConfig.resources.appLabel,
+                namespace: deploy.metadata.namespace
+              },
+              spec: {
+                containers: [ getContainers(deploy) ]
+              }
+            }
+          }
+        }
+      )
+    })
+
 
     //services
     eksConfig.resources.services.forEach((service) => {
@@ -73,26 +102,20 @@ export class EksStack extends Stack {
           },
           spec: {
             type: service.spec.type,
-            ports: [
-              {
-                port: service.spec.ports.port,
-                targetPort: service.spec.ports.targetPort,
-                nodePort: service.spec.ports.nodePort //???
-              }
-            ],
             selector: eksConfig.resources.appLabel,
+            ports:
+            {
+              port: service.spec.ports.port,
+              targetPort: service.spec.ports.targetPort,
+              nodePort: service.spec.ports.nodePort? service.spec.ports.nodePort : null //???
+            }
           }
         }
       )
     });
 
-    //deployment
-
-
     //adding resources to k8 cluster
     cluster.addManifest("k8-resources", resources);
-
-
 
   }
 }

@@ -55,7 +55,7 @@ export interface nsConfig{
 export interface servicesConfig{
 	apiVersion: string;
 	metadata: metadataConfig;
-	spec: specConfig;
+	spec: serviceSpecConfig;
 }
 
 export interface metadataConfig{
@@ -63,7 +63,7 @@ export interface metadataConfig{
 	namespace: string
 }
 
-export interface specConfig{
+export interface serviceSpecConfig{
 	type: string,
     ports: portsConfig
 }
@@ -75,3 +75,38 @@ export interface portsConfig{
 	nodePort: number
 }
 
+export interface deployConfig{
+	apiVersion: string;
+	metadata: metadataConfig;
+	spec: deploySpecConfig;
+}
+
+export interface deploySpecConfig{
+	replicas: number;
+	template: templateConfig;
+}
+
+export interface templateConfig{
+	metadata: metadataConfig;
+	containers: containersConfig[];
+}
+
+export interface containersConfig{
+	name: string
+	image: string;
+	containerPort: number
+	envSecret: envSecretConfig[];
+	envMapKey: envMapKeyRef[];	
+}
+
+export interface envSecretConfig{
+	name: string;
+	secretName: string;
+	secretKey: string
+}
+
+export interface envMapKeyRef{
+	name: string;
+	MapKeyRefName: string;
+	MapKeyRefKey: string
+}
