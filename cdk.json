@@ -53,48 +53,64 @@
           "diskSize": 20,
           "minSize": 1,
           "maxSize": 3,
-          "albVersion":"2.4.1",
+          "albVersion": "2.4.1",
+          "nodeGroup": true,
           "istanceTypes": [
             {
               "class": "t2",
               "size": "micro"
             }
           ],
+          "fargate": true,
+          "fargateSelector": [
+            {
+              "fargateNamespaceSelector": "my-fargate-ns",
+              "fargatePodLabels": {
+                "labelName": "name",
+                "labelValue": "fargate_pod"
+              }
+            }
+          ],
+          
           "resources": {
-            "appLabel": "my-app-label",
-
+            "selectorAppLabel": "my-app-label",
             "namespaces": [
               {
                 "apiVersion": "v1",
-                "metadataName": "my-app-ns"
+                "metadataName": "my-app-namespace"
+              },
+              {
+                "apiVersion": "v1",
+                "metadataName": "my-fargate-ns"
               }
             ],
-
-            "configMap": {
-              "apiVersion": "v1",
-              "metadata": {
-                "name": "my-secret-kubernetes",
-                "namespace": "my-app-ns"
-              },
-              "data": [
-                {
-                  "key": "mongo-url",
-                  "value": "mongo-service"
-                }
-              ]
-            },
+            "configMap": [
+              {
+                "apiVersion": "v1",
+                "metadata": {
+                  "name": "my-secret-kubernetes",
+                  "namespace": "my-app-namespace"
+                },
+                "data": [
+                  {
+                    "key": "mongo-url",
+                    "value": "mongo-service"
+                  }
+                ]
+              }
+            ],
             "secret": {
               "apiVersion": "v1",
               "metadata": {
                 "name": "my-secret-kubernetes",
-                "namespace": "my-app-ns"
+                "namespace": "my-app-namespace"
               },
               "type": "Opaque",
               "data": {
                 "keyUser": "mongo-user",
                 "userValue": "username",
                 "keyPassword": "mongo-password",
-                "passwordValue": "MyPassword"
+                "passwordValue": "my-password"
               }
             },
             "services": [
@@ -102,7 +118,7 @@
                 "apiVersion": "v1",
                 "metadata": {
                   "name": "my-app-kubernetes",
-                  "namespace": "my-app-ns"
+                  "namespace": "my-app-namespace"
                 },
                 "spec": {
                   "type": "ClusterIP",
@@ -120,7 +136,7 @@
                 "apiVersion": "apps/v1",
                 "metadata": {
                   "name": "my-app-kubernetes",
-                  "namespace": "my-app-ns"
+                  "namespace": "my-app-namespace"
                 },
                 "spec": {
                   "containers": [
@@ -154,8 +170,7 @@
             ]
           }
         },
-
-        "aurora":{
+        "aurora": {
           "engine": "aurora",
           "majorVersion": "5.6",
           "version": "1.23.4",

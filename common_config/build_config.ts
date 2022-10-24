@@ -33,6 +33,18 @@ export interface EksStack{
 	diskSize: number;
 	istanceTypes: istanceConfig[];
 	resources: resourcesConfig;
+	nodeGroup: boolean;
+	fargate: boolean;
+	fargateSelector: fargateConfig[];
+	
+}
+export interface fargateConfig{
+	fargateNamespaceSelector: string;
+	fargatePodLabels: labelsFargate;
+}
+export interface labelsFargate{
+	labelName: string;
+	labelValue: string;
 }
 
 export interface istanceConfig{
@@ -41,12 +53,12 @@ export interface istanceConfig{
 }
 
 export interface resourcesConfig{
-	appLabel: string
+	selectorAppLabel: string
 	namespaces: nsConfig[];
 	services: servicesConfig[];
 	deployments: deployConfig[];
-	secret: secretConfig;
-	configmap: configMapConfig;
+	secret: secretConfig[];
+	configmap: configMapConfig[];
 }
 
 export interface nsConfig{

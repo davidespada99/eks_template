@@ -1,6 +1,6 @@
 import { Stack, StackProps } from 'aws-cdk-lib';
 import { InstanceType, SubnetType } from 'aws-cdk-lib/aws-ec2';
-import { AlbControllerVersion, Cluster, KubernetesVersion } from 'aws-cdk-lib/aws-eks';
+import { AlbControllerVersion, Cluster, KubernetesVersion, Selector } from 'aws-cdk-lib/aws-eks';
 import { ManagedPolicy, Role, ServicePrincipal } from 'aws-cdk-lib/aws-iam';
 import { Construct } from 'constructs';
 import { BuildConfig } from '../common_config/build_config';
@@ -26,6 +26,7 @@ export class EksStack extends Stack {
       vpcSubnets: [{ subnets: eksConfig.privateSubnets ? netProps.privateSubnets : netProps.publicSubnets },],
       defaultCapacity: 0,
       role: clusterRole,
+      //ingress alb
       albController: {
         version: AlbControllerVersion.of(eksConfig.albVersion)
       },
@@ -38,14 +39,38 @@ export class EksStack extends Stack {
     });
 
     //add a Node Group of aws ec2 istances self-managed 
-    eksCluster.addNodegroupCapacity(`${prefix}-eks-cluster`, {
-      nodegroupName: `${prefix}-node-group`,
-      instanceTypes: istancesType,
-      desiredSize: eksConfig.desiredCapacity,
-      minSize: eksConfig.minSize,
-      maxSize: eksConfig.maxSize,
-      diskSize: eksConfig.diskSize
-    });
+    if(eksConfig.nodeGroup){
+      eksCluster.addNodegroupCapacity(`${prefix}-eks-cluster`, {
+        nodegroupName: `${prefix}-node-group`,
+        instanceTypes: istancesType,
+        desiredSize: eksConfig.desiredCapacity,
+        minSize: eksConfig.minSize,
+        maxSize: eksConfig.maxSize,
+        diskSize: eksConfig.diskSize
+      });  
+    }
+
+    //add Fargate profile to EKS Cluster
+
+    
+    if(eksConfig.fargate){
+      let selectors: Selector[] = [];
+      eksConfig.fargateSelector.forEach((sel)=>{
+        selectors.push(
+          {
+            namespace: sel.fargateNamespaceSelector,
+            labels: {[sel.fargatePodLabels.labelName]: sel.fargatePodLabels.labelValue }
+          }
+        )
+      })
+      
+      eksCluster.addFargateProfile( "MyFargateProfile", {
+        vpc: netProps.vpc,
+        fargateProfileName: `${prefix}-fargate-profile`,
+        selectors: selectors
+      })
+    }
+    
 
     let resources: any[] = [];
     //Resources must be deployed in a specific order. 
@@ -68,38 +93,44 @@ export class EksStack extends Stack {
     })
 
     //configMap
-    resources.push(
-      {
-        apiVersion: eksConfig.resources.configmap.apiVersion,
-        kind: "ConfigMap",
-        metadata: {
-          name: eksConfig.resources.configmap.metadata.name,
-          namespace: eksConfig.resources.configmap.metadata.namespace
-        },
-        data:{
-          [eksConfig.resources.configmap.data.key] : eksConfig.resources.configmap.data.value
+    eksConfig.resources.configmap.forEach((cm) => {
+      resources.push(
+        {
+          apiVersion: cm.apiVersion,
+          kind: "ConfigMap",
+          metadata: {
+            name: cm.metadata.name,
+            namespace: cm.metadata.namespace
+          },
+          data:{
+            [cm.data.key] : cm.data.value
+          }
+  
         }
-
-      }
-    )
+      )
+    })
+    
 
 
     //secret
-    resources.push(
-      {
-        apiVersion: eksConfig.resources.secret.apiVersion,
-        kind: "Secret",
-        metadata: {
-          name: eksConfig.resources.secret.metadata.name,
-          namespace: eksConfig.resources.secret.metadata.namespace
-        },
-        type: eksConfig.resources.secret.type,
-        data: {
-          [eksConfig.resources.secret.data.keyUser]: eksConfig.resources.secret.data.userValue,
-          [eksConfig.resources.secret.data.keyPassword]: eksConfig.resources.secret.data.passwordValue
+    eksConfig.resources.secret.forEach((sec) => {
+      resources.push(
+        {
+          apiVersion: sec.apiVersion,
+          kind: "Secret",
+          metadata: {
+            name: sec.metadata.name,
+            namespace: sec.metadata.namespace
+          },
+          type: sec.type,
+          data: {
+            [sec.data.keyUser]: sec.data.userValue,
+            [sec.data.keyPassword]: sec.data.passwordValue
+          }
         }
-      }
-    )
+      )
+    })
+    
 
     //deployments
     eksConfig.resources.deployments.forEach((deploy) => {
@@ -113,10 +144,10 @@ export class EksStack extends Stack {
           },
           spec: {
             replicas: deploy.spec.replicas,
-            selector: { matchLabels: eksConfig.resources.appLabel, },
+            selector: { matchLabels: eksConfig.resources.selectorAppLabel, },
             template: {
               metadata: {
-                labels: eksConfig.resources.appLabel,
+                labels: eksConfig.resources.selectorAppLabel,
                 namespace: deploy.metadata.namespace
               },
               spec: {
@@ -141,12 +172,12 @@ export class EksStack extends Stack {
           },
           spec: {
             type: service.spec.type,
-            selector: eksConfig.resources.appLabel,
+            selector: eksConfig.resources.selectorAppLabel,
             ports:
             {
               port: service.spec.ports.port,
               targetPort: service.spec.ports.targetPort,
-              nodePort: service.spec.ports.nodePort ? service.spec.ports.nodePort : null //???
+              nodePort: service.spec.ports.nodePort ? service.spec.ports.nodePort : null 
             }
           }
         }
