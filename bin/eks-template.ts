@@ -1,19 +1,18 @@
-#!/usr/bin/env node
-import 'source-map-support/register';
-import * as cdk from 'aws-cdk-lib';
 import { EksStack } from '../lib/eks';
-import { Stack, Tags } from 'aws-cdk-lib';
+import { App, Stack, Tags } from 'aws-cdk-lib';
 import { getConfig } from '../common_config/get_config';
 import { NetworkStack } from '../lib/network';
 import { NetworkImportStack } from '../lib/network-import';
 import { AuroraDBStack } from '../lib/aurora-db';
+import { PipelineStack } from '../lib/pipeline';
+
 
 function addTagsToStack(stack: Stack, name: string): void {
     Tags.of(stack).add("Project", buildConfig.project);
     Tags.of(stack).add("Environment", buildConfig.environment);
   }
   
-const app = new cdk.App();
+const app = new App();
 const buildConfig = getConfig(app);
 const envDetails = {
   account: buildConfig.account,
@@ -52,3 +51,11 @@ const auroraStack = new AuroraDBStack(app, auroraDBStackName, buildConfig, netIm
   env: envDetails,
 })
 addTagsToStack(auroraStack as AuroraDBStack, auroraDBStackName);
+
+//pipeline stack
+const PipelineStackName = `${prefix}-pipeline-stack`;
+const pipelineStack = new PipelineStack(app, PipelineStackName, buildConfig, eksStack, {
+  stackName: PipelineStackName,
+  env: envDetails
+});
+addTagsToStack(pipelineStack as PipelineStack, PipelineStackName);

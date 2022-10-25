@@ -16,29 +16,30 @@ export class AuroraDBStack extends Stack{
         let dbEngine;
         if(auroraConfig.engine == "aurora"){
             dbEngine =  DatabaseClusterEngine.aurora({
-                version: AuroraEngineVersion.of(`${auroraConfig.majorVersion}.mysql_aurora.${auroraConfig.version}`)
+                version: AuroraEngineVersion.of(`${auroraConfig.majorVersion}.mysql_aurora.${auroraConfig.version}`, auroraConfig.majorVersion)
             })
         }
         else if(auroraConfig.engine == "auroraMysql"){
             dbEngine = DatabaseClusterEngine.auroraMysql({
-                version: AuroraMysqlEngineVersion.of(`${auroraConfig.majorVersion}.mysql_aurora.${auroraConfig.version}`)
+                version: AuroraMysqlEngineVersion.of(`${auroraConfig.majorVersion}.mysql_aurora.${auroraConfig.version}`, auroraConfig.majorVersion)
             })
         }
         else if(auroraConfig.engine == "auroraPostgres"){
             dbEngine = DatabaseClusterEngine.auroraPostgres({
-                version: AuroraPostgresEngineVersion.of(`${auroraConfig.version}`,`${auroraConfig.majorVersion}`)
+                version: AuroraPostgresEngineVersion.of(`${auroraConfig.version}`,`${auroraConfig.majorVersion}` )
             })
         }
         else{
-            dbEngine = DatabaseClusterEngine.aurora({
-                version: AuroraEngineVersion.of(`5.6.mysql_aurora.1.23.4`)
+            dbEngine = DatabaseClusterEngine.auroraMysql({
+                version: AuroraMysqlEngineVersion.of("5.7.mysql_aurora.2.04.0")
             })
         }
 
-        const dbRole = new Role(this, "dbRole", {
+        /*const dbRole = new Role(this, "dbRole", {
             assumedBy: new ServicePrincipal("rds.amazonaws.com"),
             managedPolicies: [ManagedPolicy.fromAwsManagedPolicyName("AmazonRDSServiceRolePolicy"),]
           });
+          */
 
         const auroraCluster = new DatabaseCluster(this, 'AuroraCluster', {
             clusterIdentifier: `${prefix}-aurora-cluster`,
@@ -46,12 +47,11 @@ export class AuroraDBStack extends Stack{
             instanceProps: {
                 vpc: netProps.vpc,
                 instanceType: new InstanceType(`${auroraConfig.istanceClass}.${auroraConfig.istanceSize}`),
-                vpcSubnets: {subnets: auroraConfig.privateSubnets? netProps.privateSubnets : netProps.publicSubnets}
+                vpcSubnets: {subnets: auroraConfig.privateSubnets? netProps.privateSubnets : netProps.publicSubnets},
             },
             deletionProtection: auroraConfig.deletionProtection,
             instances: auroraConfig.istancesNumber,
-            monitoringRole: dbRole,
-            
+            //monitoringRole: dbRole,
         })
     }
 }

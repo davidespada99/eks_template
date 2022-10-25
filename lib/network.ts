@@ -13,7 +13,6 @@ export class NetworkStack extends Stack {
         super(scope, id, props);
 
         const prefix = `${buildConfig.environment}-${buildConfig.project}`;
-
         // VPC
         const vpcName = `${prefix}-vpc`;
         this.vpc = new Vpc(this, vpcName, {

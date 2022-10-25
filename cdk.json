@@ -52,8 +52,7 @@
           "desiredCapacity": 2,
           "diskSize": 20,
           "minSize": 1,
-          "maxSize": 3,
-          "albVersion": "2.4.1",
+          "maxSize": 2,
           "nodeGroup": true,
           "istanceTypes": [
             {
@@ -61,64 +60,60 @@
               "size": "micro"
             }
           ],
-          "fargate": true,
+          "fargate": false,
           "fargateSelector": [
             {
-              "fargateNamespaceSelector": "my-fargate-ns",
+              "fargateNamespaceSelector": "default",
               "fargatePodLabels": {
                 "labelName": "name",
-                "labelValue": "fargate_pod"
+                "labelValue": "my-app-kubernetes"
               }
             }
           ],
           
           "resources": {
-            "selectorAppLabel": "my-app-label",
-            "namespaces": [
-              {
-                "apiVersion": "v1",
-                "metadataName": "my-app-namespace"
-              },
-              {
-                "apiVersion": "v1",
-                "metadataName": "my-fargate-ns"
-              }
-            ],
-            "configMap": [
+            "selectorLabel": "my-app-kubernetes",
+
+            "configMap": 
+            [
               {
                 "apiVersion": "v1",
                 "metadata": {
-                  "name": "my-secret-kubernetes",
-                  "namespace": "my-app-namespace"
+                  "name": "mongo-config",
+                  "namespace": "default"
                 },
-                "data": [
+                "data": 
                   {
                     "key": "mongo-url",
                     "value": "mongo-service"
                   }
-                ]
               }
             ],
-            "secret": {
+
+            "secret": [
+              {
               "apiVersion": "v1",
               "metadata": {
                 "name": "my-secret-kubernetes",
-                "namespace": "my-app-namespace"
+                "namespace": "default"
               },
               "type": "Opaque",
               "data": {
                 "keyUser": "mongo-user",
-                "userValue": "username",
+                "userValue": "bW9uZ291c2Vy",
                 "keyPassword": "mongo-password",
-                "passwordValue": "my-password"
+                "passwordValue": "bW9uZ29wYXNzd29yZA=="
               }
-            },
-            "services": [
+            }
+          ],
+
+            "services": 
+            [
               {
                 "apiVersion": "v1",
                 "metadata": {
                   "name": "my-app-kubernetes",
-                  "namespace": "my-app-namespace"
+                  "namespace": "default"
                 },
                 "spec": {
                   "type": "ClusterIP",
@@ -131,54 +126,65 @@
                 }
               }
             ],
-            "deployment": [
+
+            "deployments": [
               {
                 "apiVersion": "apps/v1",
                 "metadata": {
                   "name": "my-app-kubernetes",
-                  "namespace": "my-app-namespace"
+                  "namespace": "default"
                 },
                 "spec": {
-                  "containers": [
-                    {
-                      "name": "my-app-kubernetes",
-                      "image": "mongo",
-                      "containerPort": 27017,
-                      "envSecret": [
-                        {
-                          "name": "USER-NAME",
-                          "secretName": "my-secret-kubernetes",
-                          "secretKey": "mongo-user"
-                        },
-                        {
-                          "name": "USER-PWD",
-                          "secretName": "my-secret-kubernetes",
-                          "secretKey": "mongo-password"
-                        }
-                      ],
-                      "envMapKey": [
-                        {
-                          "name": null,
-                          "MapKeyRefName": null,
-                          "MapKeyRefKey": null
-                        }
-                      ]
-                    }
-                  ]
+                  "replicas": 2,
+                  "template":{
+                    "containers": [
+                      {
+                        "name": "my-app-kubernetes",
+                        "image": "mongo",
+                        "containerPort": 27017,
+                        "envSecret": [
+                          {
+                            "name": "MONGO_INITDB_ROOT_USERNAME",
+                            "secretName": "my-secret-kubernetes",
+                            "secretKey": "mongo-user"
+                          },
+                          {
+                            "name": "MONGO_INITDB_ROOT_PASSWORD",
+                            "secretName": "my-secret-kubernetes",
+                            "secretKey": "mongo-password"
+                          }
+                        ],
+                        "envMapKey": [
+                          {
+                            "name": null,
+                            "MapKeyRefName": null,
+                            "MapKeyRefKey": null
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                  
                 }
               }
             ]
           }
         },
+
         "aurora": {
-          "engine": "aurora",
-          "majorVersion": "5.6",
-          "version": "1.23.4",
+          "engine": "auroraMysql",
+          "majorVersion": "5.7",
+          "version": "2.04.0",
           "istanceClass": "t3",
-          "istanceSize": "micro",
+          "istanceSize": "medium",
           "privateSubnets": true,
           "deletionProtection": false,
           "istancesNumber": 2
+        },
+
+        "pipeline":{
+          "importRepoName": "application-arch-2",
+          "sourceBranchName": "main"
         }
       }
     },

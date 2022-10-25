@@ -1,13 +1,15 @@
 import { Stack, StackProps } from 'aws-cdk-lib';
 import { InstanceType, SubnetType } from 'aws-cdk-lib/aws-ec2';
-import { AlbControllerVersion, Cluster, KubernetesVersion, Selector } from 'aws-cdk-lib/aws-eks';
-import { ManagedPolicy, Role, ServicePrincipal } from 'aws-cdk-lib/aws-iam';
+import { AlbController, AlbControllerVersion, Cluster, KubernetesVersion, Selector, ServiceAccount } from 'aws-cdk-lib/aws-eks';
+import { ManagedPolicy, PolicyStatement, Role, ServicePrincipal, User } from 'aws-cdk-lib/aws-iam';
 import { Construct } from 'constructs';
 import { BuildConfig } from '../common_config/build_config';
 import { NetworkImportStack } from './network-import';
 import { getContainers } from './eksFunctions/eksFunctions';
 
 export class EksStack extends Stack {
+  public serviceAccount: ServiceAccount;
+
   constructor(scope: Construct, id: string, buildConfig: BuildConfig, netProps: NetworkImportStack, props?: StackProps) {
     super(scope, id, props);
 
@@ -23,23 +25,30 @@ export class EksStack extends Stack {
       clusterName: `${prefix}-eks-cluster`,
       version: KubernetesVersion.of(eksConfig.version),
       vpc: netProps.vpc,
-      vpcSubnets: [{ subnets: eksConfig.privateSubnets ? netProps.privateSubnets : netProps.publicSubnets },],
+      vpcSubnets: [{ subnets: eksConfig.privateSubnets ? netProps.privateSubnets : netProps.publicSubnets }],
       defaultCapacity: 0,
       role: clusterRole,
-      //ingress alb
-      albController: {
-        version: AlbControllerVersion.of(eksConfig.albVersion)
-      },
-
     });
 
-    let istancesType: InstanceType[] = [];
-    eksConfig.istanceTypes.forEach((type) => {
-      istancesType.push(new InstanceType(`${type.class}.${type.size}`))
+    //alb (Ingress) Controller
+    const albController = new AlbController(this, "alb-controller", {
+      cluster: eksCluster,
+      version: AlbControllerVersion.V2_4_1
     });
+
+    this.serviceAccount = eksCluster.addServiceAccount('MyServiceAccount', {
+      namespace: "default"
+    });
+
+
 
     //add a Node Group of aws ec2 istances self-managed 
-    if(eksConfig.nodeGroup){
+    if (eksConfig.nodeGroup) {
+      let istancesType: InstanceType[] = [];
+      eksConfig.istanceTypes.forEach((type) => {
+        istancesType.push(new InstanceType(`${type.class}.${type.size}`))
+      });
+
       eksCluster.addNodegroupCapacity(`${prefix}-eks-cluster`, {
         nodegroupName: `${prefix}-node-group`,
         instanceTypes: istancesType,
@@ -47,74 +56,66 @@ export class EksStack extends Stack {
         minSize: eksConfig.minSize,
         maxSize: eksConfig.maxSize,
         diskSize: eksConfig.diskSize
-      });  
+      });
     }
 
     //add Fargate profile to EKS Cluster
-
-    
-    if(eksConfig.fargate){
+    if (eksConfig.fargate) {
       let selectors: Selector[] = [];
-      eksConfig.fargateSelector.forEach((sel)=>{
+      eksConfig.fargateSelector.forEach((sel) => {
         selectors.push(
           {
             namespace: sel.fargateNamespaceSelector,
-            labels: {[sel.fargatePodLabels.labelName]: sel.fargatePodLabels.labelValue }
+            labels: { [sel.fargatePodLabels.labelName]: sel.fargatePodLabels.labelValue }
           }
         )
       })
-      
-      eksCluster.addFargateProfile( "MyFargateProfile", {
+
+      eksCluster.addFargateProfile("MyFargateProfile", {
         vpc: netProps.vpc,
         fargateProfileName: `${prefix}-fargate-profile`,
         selectors: selectors
       })
     }
-    
 
-    let resources: any[] = [];
+
     //Resources must be deployed in a specific order. 
     //You cannot define a resource in a Kubernetes namespace before the namespace was created
 
-    //namspaces
-    eksConfig.resources.namespaces.forEach((ns) => {
-      resources.push(
-        {
-          apiVersion: eksConfig.resources.namespaces.forEach((ns) => {
-            resources.push({
-              apiVersion: ns.apiversion,
-              kind: 'Namespace',
-              metadata: { name: ns.metadataName },
-            }
-            )
-          }),
+    //namespace(beside the defaul namespace)
+    /*const namespace = eksCluster.addManifest("namespaceManifest", {
+      apiVersion: eksConfig.resources.namespace.apiversion,
+      kind: 'Namespace',
+      metadata: {
+        name: eksConfig.resources.namespace.name,
+        labels: {
+          name: eksConfig.resources.namespace.name
         }
-      );
-    })
+      },
+    })*/
 
     //configMap
-    eksConfig.resources.configmap.forEach((cm) => {
-      resources.push(
+    eksConfig.resources.configMap.forEach((config) => {
+      eksCluster.addManifest("configMapManifest",
         {
-          apiVersion: cm.apiVersion,
+          apiVersion: config.apiVersion,
           kind: "ConfigMap",
           metadata: {
-            name: cm.metadata.name,
-            namespace: cm.metadata.namespace
+            name: config.metadata.name,
+            namespace: config.metadata.namespace
           },
-          data:{
-            [cm.data.key] : cm.data.value
+          data: {
+            [config.data.key]: config.data.value
           }
-  
         }
       )
     })
-    
+
 
 
     //secret
     eksConfig.resources.secret.forEach((sec) => {
-      resources.push(
+      eksCluster.addManifest("secretManifest",
         {
           apiVersion: sec.apiVersion,
           kind: "Secret",
@@ -130,39 +131,48 @@ export class EksStack extends Stack {
         }
       )
     })
-    
+
 
     //deployments
     eksConfig.resources.deployments.forEach((deploy) => {
-      resources.push(
+      const deployment = eksCluster.addManifest("deploymentsManifest",
         {
           apiVersion: deploy.apiVersion,
           kind: "Deployment",
           metadata: {
             name: deploy.metadata.name,
-            namespace: deploy.metadata.namespace
+            namespace: deploy.metadata.namespace,
+            labels: {
+              app: eksConfig.resources.selectorLabel
+            }
           },
           spec: {
             replicas: deploy.spec.replicas,
-            selector: { matchLabels: eksConfig.resources.selectorAppLabel, },
+            selector: {
+              matchLabels: {
+                app: eksConfig.resources.selectorLabel
+              }
+            },
             template: {
               metadata: {
-                labels: eksConfig.resources.selectorAppLabel,
+                labels: { app: eksConfig.resources.selectorLabel },
                 namespace: deploy.metadata.namespace
               },
               spec: {
-                containers: [getContainers(deploy)]
+                serviceAccountName: this.serviceAccount.serviceAccountName,
+                containers: getContainers(deploy)
               }
             }
           }
-        }
-      )
+        })
+      deployment.node.addDependency(this.serviceAccount); //??
     })
+
 
 
     //services
     eksConfig.resources.services.forEach((service) => {
-      resources.push(
+      const sv = eksCluster.addManifest("serviceManifest",
         {
           apiVersion: service.apiVersion,
           kind: "Service",
@@ -172,20 +182,30 @@ export class EksStack extends Stack {
           },
           spec: {
             type: service.spec.type,
-            selector: eksConfig.resources.selectorAppLabel,
+            selector:{
+               app: eksConfig.resources.selectorLabel
+              },
             ports:
-            {
+            [
+             { protocol: service.spec.ports.protocol,
               port: service.spec.ports.port,
               targetPort: service.spec.ports.targetPort,
-              nodePort: service.spec.ports.nodePort ? service.spec.ports.nodePort : null 
-            }
+              nodePort: service.spec.ports.nodePort ? service.spec.ports.nodePort : null}
+            ]
           }
         }
       )
+
     });
 
-    //adding resources to k8 cluster
-    eksCluster.addManifest("k8-resources", resources);
+    //add permission to access eks cluster from aws console
+    eksCluster.awsAuth.addUserMapping(
+      User.fromUserArn(this, `${prefix}-auth`, "arn:aws:iam::663614489119:user/d.spada"),
+      {
+        groups: ["system:masters"],
+        username: "d.spada_663614489119",
+      }
+    );
 
   }
 }

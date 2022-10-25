@@ -2,15 +2,15 @@ import { containersConfig, deployConfig, envMapKeyRef, envSecretConfig } from ".
 
 export function getContainers(deploy: deployConfig) {
     let containers: any[] = [];
-    deploy.spec.template.containers.forEach((container: containersConfig) => {
+    deploy.spec.template.containers.map((container: containersConfig) => {
         containers.push({
             name: container.name,
             image: container.image,
-            containerPort: container.containerPort,
-            env: [
-                getSecret(container),
-                getMapKeyRef(container)
-            ]
+            ports: [{containerPort: container.containerPort}],
+            env: getSecret(container)
+            
+                
+            
         })
     })
     return containers;
@@ -19,7 +19,7 @@ export function getContainers(deploy: deployConfig) {
 function getSecret(container: containersConfig) {
     let secrets: any[] = [];
     if (container.envSecret) {
-        container.envSecret.forEach((secret: envSecretConfig) => {
+       return container.envSecret.map((secret: envSecretConfig) => {
             secrets.push(
                 {
                     name: secret.name,
@@ -32,7 +32,6 @@ function getSecret(container: containersConfig) {
                 }
             )
         })
-        return secrets;
     }
     else { return null; }
 
@@ -41,7 +40,7 @@ function getSecret(container: containersConfig) {
 function getMapKeyRef(container: containersConfig) {
     let mapKeys: any[] = [];
     if (container.envMapKey) {
-        container.envMapKey.forEach((mapkey: envMapKeyRef) => {
+       return container.envMapKey.map((mapkey: envMapKeyRef) => {
             mapKeys.push(
                 {
                     name: mapkey.name,
@@ -54,8 +53,6 @@ function getMapKeyRef(container: containersConfig) {
                 }
             )
         })
-        return mapKeys;
     }
     else { return null; }
-
 }

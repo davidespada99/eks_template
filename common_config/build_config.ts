@@ -10,6 +10,7 @@ export interface BuildStacks {
 	network: BuildNetworkStack;
 	eks: EksStack;
 	aurora: AuroraDBStack;
+	pipeline: PipelineStack;
 }
 
 export interface BuildNetworkStack {
@@ -53,17 +54,17 @@ export interface istanceConfig{
 }
 
 export interface resourcesConfig{
-	selectorAppLabel: string
-	namespaces: nsConfig[];
+	selectorLabel: string
+	namespace: nsConfig;
 	services: servicesConfig[];
 	deployments: deployConfig[];
 	secret: secretConfig[];
-	configmap: configMapConfig[];
+	configMap: configMapConfig[];
 }
 
 export interface nsConfig{
 	apiversion: string
-	metadataName: string
+	name: string
 }
 
 export interface servicesConfig{
@@ -101,7 +102,6 @@ export interface deploySpecConfig{
 }
 
 export interface templateConfig{
-	metadata: metadataConfig;
 	containers: containersConfig[];
 }
 
@@ -159,5 +159,9 @@ export interface AuroraDBStack{
 	privateSubnets: boolean;
 	deletionProtection: boolean;
 	istancesNumber: number;
+}
 
+export interface PipelineStack{
+	importRepoName: string;
+	sourceBranchName: string;
 }
