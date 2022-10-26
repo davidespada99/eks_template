@@ -1,14 +1,15 @@
 import { Stack, StackProps } from 'aws-cdk-lib';
 import { InstanceType, SubnetType } from 'aws-cdk-lib/aws-ec2';
-import { AlbController, AlbControllerVersion, Cluster, KubernetesVersion, Selector, ServiceAccount } from 'aws-cdk-lib/aws-eks';
-import { ManagedPolicy, PolicyStatement, Role, ServicePrincipal, User } from 'aws-cdk-lib/aws-iam';
+import { AlbController, AlbControllerVersion, Cluster, KubernetesVersion, Selector} from 'aws-cdk-lib/aws-eks';
+import { IRole, ManagedPolicy, PolicyStatement, Role, ServicePrincipal, User } from 'aws-cdk-lib/aws-iam';
 import { Construct } from 'constructs';
 import { BuildConfig } from '../common_config/build_config';
 import { NetworkImportStack } from './network-import';
 import { getContainers } from './eksFunctions/eksFunctions';
 
 export class EksStack extends Stack {
-  public serviceAccount: ServiceAccount;
+
+  public eksRoleArn: string;
 
   constructor(scope: Construct, id: string, buildConfig: BuildConfig, netProps: NetworkImportStack, props?: StackProps) {
     super(scope, id, props);
@@ -35,12 +36,6 @@ export class EksStack extends Stack {
       cluster: eksCluster,
       version: AlbControllerVersion.V2_4_1
     });
-
-    this.serviceAccount = eksCluster.addServiceAccount('MyServiceAccount', {
-      namespace: "default"
-    });
-
-
 
     //add a Node Group of aws ec2 istances self-managed 
     if (eksConfig.nodeGroup) {
@@ -159,13 +154,11 @@ export class EksStack extends Stack {
                 namespace: deploy.metadata.namespace
               },
               spec: {
-                serviceAccountName: this.serviceAccount.serviceAccountName,
                 containers: getContainers(deploy)
               }
             }
           }
         })
-      deployment.node.addDependency(this.serviceAccount); //??
     })
 
 
@@ -204,6 +197,21 @@ export class EksStack extends Stack {
       {
         groups: ["system:masters"],
         username: "d.spada_663614489119",
+      }
+    );
+
+    const eksRole = new Role(this, "eksRole", {
+      assumedBy: new ServicePrincipal("codebuild.amazonaws.com")
+    })
+
+    this.eksRoleArn = eksRole.roleArn;
+
+    //creates IAM role, then referenced in codebuild to access k8
+    eksCluster.awsAuth.addRoleMapping(
+      Role.fromRoleArn(this, `code-build`, eksRole.roleArn),
+      {
+        groups: ["system:masters"],
+        username: "codebuild",
       }
     );
 

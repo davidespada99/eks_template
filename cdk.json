@@ -56,8 +56,8 @@
           "nodeGroup": true,
           "istanceTypes": [
             {
-              "class": "t2",
-              "size": "micro"
+              "class": "t3",
+              "size": "large"
             }
           ],
           "fargate": false,
@@ -135,7 +135,7 @@
                   "namespace": "default"
                 },
                 "spec": {
-                  "replicas": 2,
+                  "replicas": 1,
                   "template":{
                     "containers": [
                       {

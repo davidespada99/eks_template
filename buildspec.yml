@@ -1,9 +1,13 @@
 version: 0.2 
 os: linux
 phases:
+  install:
+    runtime-version:
+      docker: 19
+      nodejs: 12
   pre_build: 
     commands: 
-      - echo no pre-build actions will be executed
+      - //docker login with aws ecr credential
   build: 
     commands: 
       - echo Entered the build phase... 

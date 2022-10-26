@@ -47,7 +47,7 @@ addTagsToStack(eksStack as EksStack, eksStackName);
 //aurora db
 const auroraDBStackName = `${prefix}-aurora-stack`;
 const auroraStack = new AuroraDBStack(app, auroraDBStackName, buildConfig, netImportStack, {
-  stackName: eksStackName,
+  stackName: auroraDBStackName,
   env: envDetails,
 })
 addTagsToStack(auroraStack as AuroraDBStack, auroraDBStackName);
